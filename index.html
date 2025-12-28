@@ -60,14 +60,14 @@
                         },
                         body: JSON.stringify({
                             model: "claude-sonnet-4-20250514",
-                            max_tokens: 500,
+                            max_tokens: 300,
                             messages: [{
                                 role: "user",
-                                content: `Bu Türkçe metin için profesyonel bir görsel tanımla. İngilizce, detaylı, maksimum 50 kelime.
+                                content: `Bu Türkçe metin için kısa bir İngilizce görsel tanımı yaz. Maksimum 30 kelime.
 
 Metin: "${scene.text}"
 
-Görsel Tanımı:`
+Görsel:`
                             }]
                         })
                     });
@@ -76,50 +76,35 @@ Görsel Tanımı:`
                     const imagePrompt = promptData.content[0].text.trim();
                     
                     console.log('🎨 Görsel Prompt:', imagePrompt);
-                    alert(`🎨 AI görsel oluşturuyor...\n\nPrompt: "${imagePrompt}"\n\n⏳ Lütfen bekleyin!`);
+                    alert(`🎨 AI görsel oluşturuyor...\n\nPrompt: "${imagePrompt}"\n\n⏳ 5-10 saniye sürebilir!`);
                     
-                    const hfResponse = await fetch(
-                        "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0",
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({
-                                inputs: imagePrompt,
-                                parameters: {
-                                    width: 768,
-                                    height: 1344,
-                                    num_inference_steps: 30
-                                }
-                            })
-                        }
-                    );
-
-                    if (!hfResponse.ok) {
-                        throw new Error(`API hatası: ${hfResponse.status}`);
-                    }
-
-                    const blob = await hfResponse.blob();
-                    const reader = new FileReader();
+                    const encodedPrompt = encodeURIComponent(imagePrompt);
+                    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1080&height=1920&seed=${Date.now()}&nologo=true`;
                     
-                    reader.onloadend = () => {
+                    console.log('📸 Görsel URL:', imageUrl);
+                    
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    
+                    img.onload = () => {
+                        console.log('✅ Görsel yüklendi!');
                         setScenes(prev => prev.map(s => 
-                            s.id === sceneId ? { ...s, imageUrl: reader.result } : s
+                            s.id === sceneId ? { ...s, imageUrl } : s
                         ));
                         alert('✅ AI görsel başarıyla oluşturuldu!');
                         setIsGenerating(false);
                     };
                     
-                    reader.onerror = () => {
-                        throw new Error('Görsel okuma hatası');
+                    img.onerror = () => {
+                        console.error('❌ Görsel yüklenemedi');
+                        throw new Error('Görsel yüklenemedi');
                     };
                     
-                    reader.readAsDataURL(blob);
+                    img.src = imageUrl;
                     
                 } catch (error) {
                     console.error('❌ Hata:', error);
-                    alert(`❌ Görsel oluşturulamadı!\n\n${error.message}`);
+                    alert(`❌ Görsel oluşturulamadı!\n\n${error.message}\n\nİnternet bağlantınızı kontrol edin.`);
                     setIsGenerating(false);
                 }
             };
@@ -220,7 +205,7 @@ Görsel Tanımı:`
                     <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
                         🎬 AI Viral Video Maker
                     </h1>
-                    <p className="text-gray-400 mb-8">AI destekli görsel oluşturucu</p>
+                    <p className="text-gray-400 mb-8">AI destekli görsel oluşturucu - Pollinations.ai</p>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1">
@@ -336,27 +321,6 @@ Görsel Tanımı:`
                                         </div>
 
                                         <div className="space-y-2">
-                                            <div>
-                                                <label className="text-xs text-gray-400 block mb-1">Görsel URL</label>
-                                                <input 
-                                                    type="text" 
-                                                    value={scene.imageUrl} 
-                                                    onChange={(e) => updateScene(scene.id, 'imageUrl', e.target.value)}
-                                                    placeholder="https://..."
-                                                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
-                                                />
-                                            </div>
-                                            
-                                            <div>
-                                                <label className="text-xs text-gray-400 block mb-1">Bilgisayardan Yükle</label>
-                                                <input 
-                                                    type="file" 
-                                                    accept="image/*"
-                                                    onChange={(e) => handleImageUpload(scene.id, e)}
-                                                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm"
-                                                />
-                                            </div>
-
                                             <button 
                                                 onClick={() => searchImage(scene.id)}
                                                 disabled={isGenerating}
@@ -364,6 +328,16 @@ Görsel Tanımı:`
                                             >
                                                 {isGenerating ? '⏳ Oluşturuluyor...' : '🤖 AI İLE GÖRSEL OLUŞTUR'}
                                             </button>
+
+                                            <div>
+                                                <label className="text-xs text-gray-400 block mb-1">veya Bilgisayardan Yükle</label>
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*"
+                                                    onChange={(e) => handleImageUpload(scene.id, e)}
+                                                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm"
+                                                />
+                                            </div>
 
                                             {scene.imageUrl && (
                                                 <img 
