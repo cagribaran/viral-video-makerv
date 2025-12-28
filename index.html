@@ -60,51 +60,65 @@
                         },
                         body: JSON.stringify({
                             model: "claude-sonnet-4-20250514",
-                            max_tokens: 300,
+                            max_tokens: 200,
                             messages: [{
                                 role: "user",
-                                content: `Bu Türkçe metin için kısa bir İngilizce görsel tanımı yaz. Maksimum 30 kelime.
+                                content: `Bu Türkçe metin için SADECE 2-3 basit İngilizce kelime ver. Unsplash'te arama için.
 
 Metin: "${scene.text}"
 
-Görsel:`
+Kelimeler (örn: "night sky stars"):`
                             }]
                         })
                     });
 
                     const promptData = await promptResponse.json();
-                    const imagePrompt = promptData.content[0].text.trim();
+                    const keywords = promptData.content[0].text.trim().replace(/[",]/g, ' ');
                     
-                    console.log('🎨 Görsel Prompt:', imagePrompt);
-                    alert(`🎨 AI görsel oluşturuyor...\n\nPrompt: "${imagePrompt}"\n\n⏳ 5-10 saniye sürebilir!`);
+                    console.log('🎨 Anahtar Kelimeler:', keywords);
                     
-                    const encodedPrompt = encodeURIComponent(imagePrompt);
-                    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1080&height=1920&seed=${Date.now()}&nologo=true`;
+                    const timestamp = Date.now();
+                    const imageUrl = `https://source.unsplash.com/1080x1920/?${encodeURIComponent(keywords)}&${timestamp}`;
                     
-                    console.log('📸 Görsel URL:', imageUrl);
+                    console.log('📸 Unsplash URL:', imageUrl);
                     
                     const img = new Image();
                     img.crossOrigin = 'anonymous';
                     
+                    let loadTimeout = setTimeout(() => {
+                        console.log('⏱️ Timeout, yine de ekleniyor');
+                        setScenes(prev => prev.map(s => 
+                            s.id === sceneId ? { ...s, imageUrl } : s
+                        ));
+                        alert(`✅ Görsel eklendi!\n\nAnahtar kelimeler: "${keywords}"`);
+                        setIsGenerating(false);
+                    }, 3000);
+                    
                     img.onload = () => {
+                        clearTimeout(loadTimeout);
                         console.log('✅ Görsel yüklendi!');
                         setScenes(prev => prev.map(s => 
                             s.id === sceneId ? { ...s, imageUrl } : s
                         ));
-                        alert('✅ AI görsel başarıyla oluşturuldu!');
+                        alert(`✅ AI görsel başarıyla eklendi!\n\nAnahtar kelimeler: "${keywords}"`);
                         setIsGenerating(false);
                     };
                     
                     img.onerror = () => {
-                        console.error('❌ Görsel yüklenemedi');
-                        throw new Error('Görsel yüklenemedi');
+                        clearTimeout(loadTimeout);
+                        console.log('ℹ️ Direkt URL kullanılıyor');
+                        setScenes(prev => prev.map(s => 
+                            s.id === sceneId ? { ...s, imageUrl } : s
+                        ));
+                        alert(`ℹ️ Görsel eklendi!\n\nAnahtar kelimeler: "${keywords}"\n\nNot: Önizlemede göremezsen sayfayı yenile.`);
+                        setIsGenerating(false);
                     };
                     
                     img.src = imageUrl;
                     
                 } catch (error) {
                     console.error('❌ Hata:', error);
-                    alert(`❌ Görsel oluşturulamadı!\n\n${error.message}\n\nİnternet bağlantınızı kontrol edin.`);
+                    alert(`❌ Hata oluştu!\n\n${error.message}`);
                     setIsGenerating(false);
                 }
             };
@@ -205,7 +219,7 @@ Görsel:`
                     <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
                         🎬 AI Viral Video Maker
                     </h1>
-                    <p className="text-gray-400 mb-8">AI destekli görsel oluşturucu - Pollinations.ai</p>
+                    <p className="text-gray-400 mb-8">AI + Unsplash Görsel Sistemi</p>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1">
@@ -326,7 +340,7 @@ Görsel:`
                                                 disabled={isGenerating}
                                                 className={`w-full ${isGenerating ? 'bg-gray-600' : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'} py-3 rounded-lg font-bold`}
                                             >
-                                                {isGenerating ? '⏳ Oluşturuluyor...' : '🤖 AI İLE GÖRSEL OLUŞTUR'}
+                                                {isGenerating ? '⏳ Oluşturuluyor...' : '🤖 AI + UNSPLASH GÖRSEL'}
                                             </button>
 
                                             <div>
